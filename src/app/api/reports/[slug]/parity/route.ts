@@ -11,9 +11,9 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
   if (!def.parity) return Response.json({ slug: def.slug, rows: [], note: "No legacy comparison defined for this report." });
   try {
     const run = await runReport(def, req);
-    const summary = def.summarize({ p: run.p, cur: run.cur, prev: run.prev, history: run.history, compare: run.cmp });
+    const summary = def.summarize(run.ctx);
     const t0 = Date.now();
-    const rows = await def.parity(run.tenant.database, run.p, summary);
+    const rows = await def.parity(run.tenant.database, run.p, summary, run.ctx);
     return Response.json({ slug: def.slug, title: def.title, legacy: def.legacy, range: { from: run.p.from, to: run.p.to }, ms: Date.now() - t0, rows });
   } catch (err) {
     return errorResponse(err);

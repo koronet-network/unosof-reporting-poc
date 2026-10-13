@@ -29,6 +29,7 @@ export function fmtBy(format: Format | string, v: number | string | null | undef
     case "num1": return n1.format(v);
     case "pct": return `${(v * 100).toFixed(1)}%`;
     case "days": return `${n0.format(v)} d`;
+    case "idx": return v.toFixed(3);
     default: return String(v);
   }
 }
@@ -36,6 +37,7 @@ export function fmtBy(format: Format | string, v: number | string | null | undef
 export function axisBy(format: Format | string, v: number) {
   if (format === "usd" || format === "usd3") return Math.abs(v) < 10 && format === "usd3" ? `$${v.toFixed(2)}` : `$${compact(v)}`;
   if (format === "pct") return `${(v * 100).toFixed(0)}%`;
+  if (format === "idx") return v.toFixed(2);
   return compact(v);
 }
 export function delta(cur: number | null, prev: number | null | undefined) {

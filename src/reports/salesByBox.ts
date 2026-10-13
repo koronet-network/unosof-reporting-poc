@@ -1,5 +1,5 @@
 import { cachedRange } from "@/lib/cache";
-import { addDays, weekKey } from "@/lib/dates";
+import { addDays, lastFullWeekEnd, weekKey } from "@/lib/dates";
 import { getPool, sql } from "@/lib/db";
 import { DATE_FIELDS, factSql, querySalesFacts, type DateField, type Fact } from "@/lib/salesFact";
 import { card, spark } from "@/lib/engine/cards";
@@ -109,6 +109,7 @@ const report: ReportDef<Fact> = {
     for (const r of cur) { const d = dateOf(r); daily.set(d, (daily.get(d) ?? 0) + r.stems); }
 
     // Insights
+    const end = lastFullWeekEnd(p.to);
     const insights: (Insight & { subject?: string })[] = [];
     for (const f of flags) insights.push({
       id: `week-${f.week}`, severity: f.direction === "low" ? "high" : "low", kind: "Unusual week",
@@ -117,21 +118,21 @@ const report: ReportDef<Fact> = {
       recommendation: f.direction === "low" ? "Check whether orders were lost, delayed or invoiced late that week." : "Confirm the extra volume was planned (a promotion or a large one-off order) and priced correctly.",
       evidence: [{ label: "Week", value: f.week }, { label: "Stems", value: num(f.value) }, { label: "Usual", value: num(f.band.median) }],
     });
-    for (const l of lapsed(history, (r) => r.billCustomer, dateOf, (r) => r.stems, p.to).slice(0, 5)) insights.push({
+    for (const l of lapsed(history, (r) => r.billCustomer, dateOf, (r) => r.stems, end).slice(0, 5)) insights.push({
       id: `lapsed-${l.entity}`, subject: `customer:${l.entity}`, severity: "high", kind: "Customer stopped ordering",
       title: `${l.entity} has not ordered for 2 weeks`,
       detail: `They ordered in ${l.activeWeeks} of the previous ${l.lookback} weeks, about ${num(l.weeklyAvg)} stems a week. Last order ${l.lastDate}.`,
       recommendation: "Contact the customer: check for a quality complaint, a price issue or a switch to another supplier.",
       filter: { billCustomer: [l.entity] }, range: { from: addDays(p.to, -83), to: p.to },
     });
-    for (const s of entityShifts(history, (r) => r.billCustomer, dateOf, (r) => r.stems, p.to, { minBase: 2000, minChange: 0.4 }).filter((s) => s.change < 0).slice(0, 4)) insights.push({
+    for (const s of entityShifts(history, (r) => r.billCustomer, dateOf, (r) => r.stems, end, { minBase: 2000, minChange: 0.4 }).filter((s) => s.change < 0).slice(0, 4)) insights.push({
       id: `drop-${s.entity}`, subject: `customer:${s.entity}`, severity: "medium", kind: "Customer buying less",
       title: `${s.entity} is down to ${num(s.recent)} stems a week, ${pctText(s.change)}`,
       detail: `${num(s.recent)} stems a week over the last ${s.recentWeeks} weeks against ${num(s.base)} over the ${s.baseWeeks} weeks before (holiday weeks left out).`,
       recommendation: "Review this account with the sales rep before the volume is lost.",
       filter: { billCustomer: [s.entity] }, range: { from: addDays(p.to, -111), to: p.to },
     });
-    for (const s of priceShifts(history, dateOf, p.to).filter((s) => s.change < 0).slice(0, 4)) insights.push({
+    for (const s of priceShifts(history, dateOf, end).filter((s) => s.change < 0).slice(0, 4)) insights.push({
       id: `price-${s.name}`, severity: "medium", kind: "Price drop",
       title: `${s.name} sold at $${s.recent.toFixed(3)} per stem, ${pctText(s.change)} against its usual price`,
       detail: `Usual price over the 12 weeks before, holiday weeks left out: $${s.base.toFixed(3)}. Stems in the last 4 weeks: ${num(s.stemsRecent)}.`,
@@ -162,7 +163,10 @@ const report: ReportDef<Fact> = {
           rows: rank(cur, "country", 12).map((c) => ({ name: c.name, value: c.amount, tooltip: `${usd(c.amount)} · ${num(c.stems)} stems` })) },
         { kind: "calendar", id: "daily", title: "Stems per day", subtitle: "Hover a day for its total", unit: "stems", full: true, daily: [...daily.entries()].sort().map(([date, value]) => ({ date, value })) },
       ],
-      notes: ["Full-box equivalents count each mixed box once. UNOSOF's own query repeats a mixed box on every variety line, so summing its column gives about three times more."],
+      notes: [
+        "Full-box equivalents count each box once. UNOSOF's query behind this report repeats a box's value on every line packed in it, so summing its column gives about three times more.",
+        "This report keeps UNOSOF's filter on the AWB number, which also drops orders with no AWB; Sales Per Day includes them.",
+      ],
     };
   },
 

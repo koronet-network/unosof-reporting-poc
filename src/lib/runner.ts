@@ -19,7 +19,8 @@ export async function runReport(def: AnyReport, req: Request) {
   const loadFrom = minDate(cmp?.from ?? p.from, historyFrom);
   const { rows, cached, ms } = await def.load(tenant.database, p.field, loadFrom, p.to);
   const dims = Object.entries(p.filters);
-  const matches = (r: Record<string, unknown>, skip?: string) => dims.every(([k, v]) => k === skip || !v.length || v.includes(String(r[k])));
+  const eq = (r: Record<string, unknown>, k: string, v: string[]) => (def.match ? def.match(r, k, v) : v.includes(String(r[k])));
+  const matches = (r: Record<string, unknown>, skip?: string) => dims.every(([k, v]) => k === skip || !v.length || eq(r, k, v));
   const within = (r: Record<string, unknown>, a: string, b: string) => { const d = def.dateOf(r, p.field); return d >= a && d <= b; };
   const filtered = rows.filter((r) => matches(r));
   const cur = filtered.filter((r) => within(r, p.from, p.to));
@@ -30,12 +31,19 @@ export async function runReport(def: AnyReport, req: Request) {
     const out: Record<string, { value: string; weight: number }[]> = {};
     for (const d of def.dimensions) {
       const m = new Map<string, number>();
-      for (const r of rows) if (within(r, p.from, p.to) && matches(r, d.key)) { const k = String(r[d.key] ?? ""); m.set(k, (m.get(k) ?? 0) + def.weight(r)); }
+      for (const r of rows) if (within(r, p.from, p.to) && matches(r, d.key)) {
+        const raw = String(r[d.key] ?? "");
+        if (!raw) continue;
+        for (const k of raw.split("|")) m.set(k, (m.get(k) ?? 0) + def.weight(r)); // multi-valued cells (e.g. box species)
+      }
       out[d.key] = [...m.entries()].sort((a, b) => b[1] - a[1]).map(([value, weight]) => ({ value, weight }));
     }
     return out;
   };
-  return { tenant, p, cmp, rows, cur, prev, history, cached, ms, options, sp };
+  const ctx = { p, cur, prev, history, compare: cmp };
+  /** Grid rows: the report's own rows (e.g. per day) or the raw rows of the window. */
+  const grid = () => (def.gridRows ? def.gridRows(ctx) : cur);
+  return { tenant, p, cmp, rows, cur, prev, history, cached, ms, options, sp, ctx, grid };
 }
 
 /** Search and sort for the detail grid and exports; the sort column is whitelisted by the report's columns. */

@@ -30,3 +30,6 @@ export function weeksBetween(from: string, to: string): string[] {
   for (let d = weekStart(from); d <= to; d = addDays(d, 7)) out.push(weekKey(d));
   return out;
 }
+
+/** The last Sunday on or before d: behaviour rules end on a complete week so a partial week does not look like a drop. */
+export const lastFullWeekEnd = (d: string) => addDays(d, -(new Date(`${d}T00:00:00Z`).getUTCDay()));

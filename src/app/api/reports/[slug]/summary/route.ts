@@ -10,7 +10,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
   try {
     const t0 = Date.now();
     const run = await runReport(def, req);
-    const summary = def.summarize({ p: run.p, cur: run.cur, prev: run.prev, history: run.history, compare: run.cmp });
+    const summary = def.summarize(run.ctx);
     return Response.json({
       tenant: run.tenant.key,
       report: {

@@ -10,7 +10,7 @@ const csvCell = (v: unknown) => {
   const safe = /^[=+\-@]/.test(s) && !/^-?\d/.test(s) ? `'${s}` : s; // neutralise spreadsheet formulas
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
-const NUMFMT: Record<string, string> = { int: "#,##0", num1: "#,##0.0", usd: "#,##0.00", usd3: "#,##0.000", pct: "0.0%", days: "#,##0", date: "yyyy-mm-dd" };
+const NUMFMT: Record<string, string> = { int: "#,##0", num1: "#,##0.0", usd: "#,##0.00", usd3: "#,##0.000", pct: "0.0%", days: "#,##0", idx: "0.000", date: "yyyy-mm-dd" };
 const SUMMABLE = new Set(["int", "usd"]);
 
 export async function GET(req: Request, { params }: { params: { slug: string } }) {
@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
   if (!def) return Response.json({ error: "Unknown report" }, { status: 404 });
   try {
     const run = await runReport(def, req);
-    const rows = sortAndSearch(def, run.cur, run.sp);
+    const rows = sortAndSearch(def, run.grid(), run.sp);
     const name = `${run.tenant.key}-${def.slug}-${run.p.from}-to-${run.p.to}`;
     if (run.sp.get("format") === "csv") {
       const lines = [def.columns.map((c) => csvCell(c.label)).join(",")];

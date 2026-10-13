@@ -5,7 +5,7 @@ import type { Column } from "@/reports/types";
 import { fmt, fmtBy } from "@/lib/format";
 
 type Row = Record<string, unknown>;
-const NUMERIC = new Set(["int", "num1", "usd", "usd3", "pct", "days"]);
+const NUMERIC = new Set(["int", "num1", "usd", "usd3", "pct", "days", "idx"]);
 
 /** Server-side paging, sorting and search over the report's rows (TanStack Table in manual mode). */
 export default function DetailGrid({ slug, baseQuery, columns, defaultSort }: {

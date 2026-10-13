@@ -55,7 +55,8 @@ select distinct
   sum(pod.mny_rate_unit * (ppd.nu_quantity * pc.nu_quantity)) as mny_amount,
   sum(ppd.nu_quantity * pc.nu_quantity) as nu_stems,
   sum(ppd.nu_quantity) as nu_bunches,
-  sum(b.nu_full) as nu_fulls
+  sum(b.nu_full) as nu_fulls,
+  max(b.nu_full) as nu_box_full -- the box's own value; UNOSOF's nu_fulls repeats it per packed line
 from z_purchaseorders po
 inner join z_invoices i on po.gu_invoice = i.gu_invoice
 inner join z_customers sc on po.gu_ship_customer = sc.gu_customer
@@ -132,7 +133,7 @@ export async function querySalesFacts(database: string, field: DateField, from: 
     stemsPerBunch: num(r.nu_stems_bunch),
     bunches: num(r.nu_bunches),
     stems: num(r.nu_stems),
-    fulls: num(r.nu_fulls),
+    fulls: num(r.nu_box_full),
     rate: num(r.mny_rate_unit),
     amount: num(r.mny_amount),
   }));
