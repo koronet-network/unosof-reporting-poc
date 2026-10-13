@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Same values as src/lib/theme.ts, as RGB channels so Tailwind opacity modifiers work. */
+:root {
+  --bg: 255 255 255; --bg2: 247 248 250; --bg3: 232 240 247;
+  --ink: 18 22 25; --ink2: 80 84 89; --ink3: 86 112 148;
+  --line: 206 219 232; --line2: 232 235 239;
+  --accent: 23 43 77; --link: 0 85 204;
+  --ok: 0 135 90; --ok-bg: 225 250 238;
+  --warn: 122 91 0; --warn-bg: 255 242 204;
+  --bad: 191 38 0; --bad-bg: 254 224 216;
+  color-scheme: light;
+}
+.dark {
+  --bg: 18 22 25; --bg2: 31 34 37; --bg3: 44 64 105;
+  --ink: 247 248 250; --ink2: 189 194 199; --ink3: 173 192 210;
+  --line: 54 58 62; --line2: 42 46 50;
+  --accent: 133 167 238; --link: 133 167 238;
+  --ok: 82 189 146; --ok-bg: 0 64 42;
+  --warn: 255 218 102; --warn-bg: 78 63 0;
+  --bad: 237 139 113; --bad-bg: 78 16 0;
+  color-scheme: dark;
+}
+
+body { @apply bg-bg text-ink antialiased; }
+.tabular { font-variant-numeric: tabular-nums; }
+.card { @apply rounded-lg border border-line bg-bg; }
+.card-h { @apply flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line2 px-4 py-2.5; }
+.card-h h2 { @apply text-sm font-semibold; }
+.card-h p { @apply text-xs text-ink2; }
+.btn { @apply inline-flex items-center gap-1.5 rounded-md border border-line bg-bg px-2.5 py-1.5 text-xs font-medium text-ink hover:bg-bg3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc400] disabled:opacity-40; }
+.btn-dark { @apply border-ink bg-ink text-bg hover:bg-ink2; }
+.field { @apply rounded-md border border-line bg-bg px-2 py-1.5 text-xs text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc400]; }
