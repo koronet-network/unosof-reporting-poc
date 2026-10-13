@@ -9,9 +9,10 @@ import lastPayment from "./ar/lastPayment";
 import classifier from "./ops/classifier";
 import standingOrders from "./ops/standingOrders";
 import awbDetail from "./ops/awbDetail";
+import bruto from "./prod/bruto";
 
 /** Reports that are built. Planned ones are listed in PLANNED until their wave lands. */
-export const REPORTS: AnyReport[] = [salesPerDay, salesTopCustomers, salesByRep, salesByBox, customerOutstanding, pendingInvoices, lastPayment, classifier, standingOrders, awbDetail];
+export const REPORTS: AnyReport[] = [salesPerDay, salesTopCustomers, salesByRep, salesByBox, customerOutstanding, pendingInvoices, lastPayment, classifier, standingOrders, awbDetail, bruto];
 
 export const PLANNED: ReportMeta[] = [
   { slug: "sales-per-day", title: "Sales Per Day", area: "Sales", wave: 1, status: "planned", description: "Daily sales with credits, boxes and price per stem.", legacy: "Sales.Report.SalesPerDay" },

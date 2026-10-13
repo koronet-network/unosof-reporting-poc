@@ -27,7 +27,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     }
     const wb = new ExcelJS.Workbook();
     wb.creator = "UNOSOF reporting POC";
-    const ws = wb.addWorksheet(def.title.slice(0, 31), { views: [{ state: "frozen", ySplit: 1 }] });
+    const ws = wb.addWorksheet(def.title.replace(/[*?:\\/[\]]/g, "-").slice(0, 31), { views: [{ state: "frozen", ySplit: 1 }] }); // Excel forbids * ? : \ / [ ] in sheet names
     ws.columns = def.columns.map((c) => ({ header: c.label, key: c.key, width: c.kind === "text" ? 24 : 13, style: NUMFMT[c.kind] ? { numFmt: NUMFMT[c.kind] } : {} }));
     for (const r of rows) ws.addRow(Object.fromEntries(def.columns.map((c) => [c.key, c.kind === "date" && r[c.key] ? new Date(`${r[c.key]}T00:00:00Z`) : r[c.key]])));
     ws.getRow(1).font = { bold: true };
