@@ -1,60 +1,42 @@
 import { z } from "zod";
-import type { DateField, Fact } from "./salesFact";
+import { addDays, addYears, daysBetween, isRealDate } from "./dates";
+import { DEFAULT_RANGE } from "./dataWindow";
 
-const day = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d), "not a real date");
-const list = z
-  .string()
-  .optional()
-  .transform((s) => (s ? s.split("|").map((x) => x.trim()).filter(Boolean) : []));
+export type Compare = "prev" | "yoy" | "none";
+export type Params = {
+  from: string;
+  to: string;
+  field: string; // one of the report's whitelisted date fields
+  compare: Compare;
+  filters: Record<string, string[]>; // only the report's declared dimensions
+};
 
-/**
- * The local La Rosaleda copy has real volume only from Oct 2021 to 22 Mar 2022, so the default view is
- * Jan–Mar 2022 against the previous period. Point at another tenant and change this.
- */
-export const DEFAULT_RANGE = { from: "2022-01-01", to: "2022-03-22", compare: "prev" as const };
+const day = z.string().refine(isRealDate, "not a real date");
 
-export const DIMENSIONS = ["market", "species", "billCustomer", "variety", "farm", "country"] as const;
-export type Dimension = (typeof DIMENSIONS)[number];
-
-export const ParamsSchema = z.object({
-  from: day.default(DEFAULT_RANGE.from),
-  to: day.default(DEFAULT_RANGE.to),
-  field: z.enum(["order", "invoice"]).default("order"),
-  compare: z.enum(["yoy", "prev", "none"]).default(DEFAULT_RANGE.compare),
-  market: list,
-  species: list,
-  billCustomer: list,
-  variety: list,
-  farm: list,
-  country: list,
-});
-export type Params = z.infer<typeof ParamsSchema> & { field: DateField };
-
-export function parseParams(sp: URLSearchParams): Params {
+/** Validates the query string against what this report declares; anything else is ignored. */
+export function parseParams(
+  sp: URLSearchParams,
+  allowed: { dateFields: string[]; dimensions: string[]; defaults?: Partial<Pick<Params, "from" | "to" | "field" | "compare">> },
+): Params {
+  const base = z.object({
+    from: day.default(allowed.defaults?.from ?? DEFAULT_RANGE.from),
+    to: day.default(allowed.defaults?.to ?? DEFAULT_RANGE.to),
+    field: z.enum(allowed.dateFields as [string, ...string[]]).default(allowed.defaults?.field ?? allowed.dateFields[0]),
+    compare: z.enum(["prev", "yoy", "none"]).default(allowed.defaults?.compare ?? "prev"),
+  });
   const obj: Record<string, string> = {};
   sp.forEach((v, k) => (obj[k] = v));
-  const p = ParamsSchema.parse(obj);
+  const p = base.parse({ from: obj.from, to: obj.to, field: obj.field, compare: obj.compare });
   if (p.from > p.to) throw new z.ZodError([{ code: "custom", path: ["from"], message: "from is after to" }]);
-  return p as Params;
+  const filters: Record<string, string[]> = {};
+  for (const d of allowed.dimensions) {
+    const v = obj[d];
+    if (v) filters[d] = v.split("|").map((s) => s.trim()).filter(Boolean).slice(0, 200);
+  }
+  return { ...p, filters };
 }
 
-const addDays = (d: string, n: number) => {
-  const x = new Date(`${d}T00:00:00Z`);
-  x.setUTCDate(x.getUTCDate() + n);
-  return x.toISOString().slice(0, 10);
-};
-const addYears = (d: string, n: number) => {
-  const x = new Date(`${d}T00:00:00Z`);
-  x.setUTCFullYear(x.getUTCFullYear() + n);
-  return x.toISOString().slice(0, 10);
-};
-export const daysBetween = (a: string, b: string) =>
-  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
-
-/** The comparison window and the offset (days) that maps it onto the current window. */
+/** The comparison window and the day offset that maps it onto the current window. */
 export function compareRange(p: Params): { from: string; to: string; shift: number } | null {
   if (p.compare === "none") return null;
   if (p.compare === "yoy") {
@@ -65,14 +47,5 @@ export function compareRange(p: Params): { from: string; to: string; shift: numb
   return { from: addDays(p.from, -len), to: addDays(p.from, -1), shift: len };
 }
 
-export const dateOf = (f: Fact, field: DateField) => (field === "invoice" ? f.invoiceDate : f.orderDate);
-export { addDays };
-
-/** Apply the dimension filters (date filtering is done by the caller). */
-export function matches(f: Fact, p: Params): boolean {
-  for (const d of DIMENSIONS) {
-    const want = p[d];
-    if (want.length && !want.includes(String(f[d]))) return false;
-  }
-  return true;
-}
+/** How far back to load so baselines (8 weeks) and behaviour change (12 weeks) have history. */
+export const HISTORY_DAYS = 7 * 16;

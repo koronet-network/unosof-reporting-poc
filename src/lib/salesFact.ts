@@ -41,7 +41,7 @@ export type Fact = {
   amount: number;
 };
 
-function factSql(dateColumn: string): string {
+export function factSql(dateColumn: string): string {
   return `
 select distinct
   pp.id_box, po.id_purchaseorder, po.tx_purchaseorder_number, po.dt_purchaseorder,

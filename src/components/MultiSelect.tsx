@@ -39,7 +39,7 @@ export default function MultiSelect({ id, label, options, value, onChange }: {
               <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-bg2">
                 <input type="checkbox" checked={value.includes(o.value)} onChange={() => toggle(o.value)} />
                 <span className="flex-1 truncate">{o.value}</span>
-                <span className="tabular text-ink3">{compact(o.stems)}</span>
+                <span className="tabular text-ink3">{compact(o.weight)}</span>
               </label>
             ))}
           </div>

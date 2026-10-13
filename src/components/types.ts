@@ -1,19 +1,22 @@
-import type { Kpis } from "@/lib/aggregate";
-import type { Dimension } from "@/lib/params";
+import type { Card, ChartSpec, Column, Insight, ReportMeta } from "@/reports/types";
+import type { Params } from "@/lib/params";
 
-export type Option = { value: string; stems: number };
-export type Summary = {
+export type Option = { value: string; weight: number };
+export type ReportSummary = {
   tenant: string;
-  meta: { factRows: number; cached: boolean; queryMs: number; totalMs: number };
-  options: Record<Dimension, Option[]>;
-  range: { from: string; to: string; field: "order" | "invoice"; compare: "yoy" | "prev" | "none"; compareFrom: string | null; compareTo: string | null };
-  rows: number;
-  kpis: { current: Kpis; previous: Kpis | null };
-  weekly: { week: string; stems: number; amount: number; prevStems: number; prevAmount: number }[];
-  topCustomers: { name: string; stems: number; amount: number; price: number }[];
-  countries: { name: string; stems: number; amount: number; price: number }[];
-  markets: { name: string; stems: number; amount: number; price: number }[];
-  varieties: { species: string; variety: string; stems: number; amount: number }[];
-  priceByLength: { length: number; stems: number; price: number }[];
-  daily: { date: string; stems: number }[];
+  report: Pick<ReportMeta, "slug" | "title" | "area" | "description" | "legacy"> & {
+    dateFields: { value: string; label: string }[];
+    dimensions: { key: string; label: string }[];
+    columns: Column<Record<string, unknown>>[];
+    defaultSort: { key: string; dir: "asc" | "desc" } | null;
+    hasParity: boolean;
+  };
+  params: Params;
+  compare: { from: string; to: string; shift: number } | null;
+  meta: { rowsLoaded: number; rowsInWindow: number; cached: boolean; queryMs: number; totalMs: number };
+  options: Record<string, Option[]>;
+  cards: Card[];
+  charts: ChartSpec[];
+  insights: Insight[];
+  notes?: string[];
 };

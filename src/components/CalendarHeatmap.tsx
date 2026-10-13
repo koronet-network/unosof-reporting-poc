@@ -8,7 +8,8 @@ import { useTheme } from "./ThemeProvider";
  * Hand-built with d3 to show what d3 is good for: a bespoke visual no chart library ships the
  * way we want it. One row per year, one column per ISO week, one cell per day, coloured by stems.
  */
-export default function CalendarHeatmap({ daily, from, to }: { daily: { date: string; stems: number }[]; from: string; to: string }) {
+export default function CalendarHeatmap({ daily, unit }: { daily: { date: string; value: number }[]; unit: string }) {
+  const from = daily[0]?.date ?? "2022-01-01", to = daily[daily.length - 1]?.date ?? from;
   const ref = useRef<SVGSVGElement | null>(null);
   const { t } = useTheme();
 
@@ -18,8 +19,8 @@ export default function CalendarHeatmap({ daily, from, to }: { daily: { date: st
     if (!ref.current) return;
 
     const cell = 12, gap = 2, top = 18, left = 34, yearGap = 22;
-    const byDate = new Map(daily.map((d) => [d.date, d.stems]));
-    const max = d3.max(daily, (d) => d.stems) ?? 1;
+    const byDate = new Map(daily.map((d) => [d.date, d.value]));
+    const max = d3.max(daily, (d) => d.value) ?? 1;
     const color = d3.scaleSequentialSqrt([0, max], d3.interpolateRgb(t.heatLow, t.heatHigh));
     const start = new Date(`${from}T00:00:00Z`), end = new Date(`${to}T00:00:00Z`);
     const years = d3.range(start.getUTCFullYear(), end.getUTCFullYear() + 1);
@@ -43,7 +44,7 @@ export default function CalendarHeatmap({ daily, from, to }: { daily: { date: st
         .on("mousemove", (ev, d) => {
           const key = d.toISOString().slice(0, 10);
           tip.style("opacity", 1).style("left", `${ev.offsetX + 12}px`).style("top", `${ev.offsetY - 10}px`)
-            .html(`<b>${d3.utcFormat("%a %d %b %Y")(d)}</b><br/>${fmt(byDate.get(key) ?? 0)} stems`);
+            .html(`<b>${d3.utcFormat("%a %d %b %Y")(d)}</b><br/>${fmt(byDate.get(key) ?? 0)} ${unit}`);
         })
         .on("mouseleave", () => tip.style("opacity", 0));
       d3.utcMonths(new Date(Date.UTC(year, 0, 1)), new Date(Date.UTC(year + 1, 0, 1))).forEach((m) => {
@@ -51,11 +52,11 @@ export default function CalendarHeatmap({ daily, from, to }: { daily: { date: st
         g.append("text").attr("x", weekOf(m) * (cell + gap)).attr("y", 7 * (cell + gap) + 10).attr("fill", t.ink3).attr("font-size", 9).text(d3.utcFormat("%b")(m));
       });
     });
-  }, [daily, from, to, t]);
+  }, [daily, from, to, t, unit]);
 
   return (
     <div className="relative overflow-x-auto">
-      <svg ref={ref} role="img" aria-label="Stems shipped per day" />
+      <svg ref={ref} role="img" aria-label={`${unit} per day`} />
       <div className="cal-tip pointer-events-none absolute rounded-md bg-ink px-2 py-1 text-xs text-bg opacity-0 transition-opacity" />
     </div>
   );
