@@ -21,3 +21,9 @@ export function presets(): { label: string; from: string; to: string }[] {
     { label: "All data", from: DATA_WINDOW.from, to: t },
   ];
 }
+
+/** As-of presets for balance reports; each period is the 28 days ending on the date. */
+export function asOfPresets(): { label: string; from: string; to: string }[] {
+  const at = (label: string, d: string) => ({ label, from: addDays(d, -27), to: d });
+  return [at("End of data", DATA_WINDOW.to), at("28 Feb 2022", "2022-02-28"), at("31 Jan 2022", "2022-01-31"), at("31 Dec 2021", "2021-12-31"), at("30 Nov 2021", "2021-11-30")];
+}

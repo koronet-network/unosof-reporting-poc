@@ -10,6 +10,7 @@ export type ReportSummary = {
     columns: Column<Record<string, unknown>>[];
     defaultSort: { key: string; dir: "asc" | "desc" } | null;
     hasParity: boolean;
+    asOf: boolean;
   };
   params: Params;
   compare: { from: string; to: string; shift: number } | null;

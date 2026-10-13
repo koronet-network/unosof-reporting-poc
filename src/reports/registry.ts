@@ -3,9 +3,12 @@ import salesByBox from "./salesByBox";
 import salesPerDay from "./sales/salesPerDay";
 import salesTopCustomers from "./sales/salesTopCustomers";
 import salesByRep from "./sales/salesByRep";
+import customerOutstanding from "./ar/customerOutstanding";
+import pendingInvoices from "./ar/pendingInvoices";
+import lastPayment from "./ar/lastPayment";
 
 /** Reports that are built. Planned ones are listed in PLANNED until their wave lands. */
-export const REPORTS: AnyReport[] = [salesPerDay, salesTopCustomers, salesByRep, salesByBox];
+export const REPORTS: AnyReport[] = [salesPerDay, salesTopCustomers, salesByRep, salesByBox, customerOutstanding, pendingInvoices, lastPayment];
 
 export const PLANNED: ReportMeta[] = [
   { slug: "sales-per-day", title: "Sales Per Day", area: "Sales", wave: 1, status: "planned", description: "Daily sales with credits, boxes and price per stem.", legacy: "Sales.Report.SalesPerDay" },

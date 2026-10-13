@@ -60,6 +60,8 @@ export type Context<Row> = {
 export type Summary = { cards: Card[]; charts: ChartSpec[]; insights: Insight[]; notes?: string[] };
 
 export interface ReportDef<Row> extends ReportMeta {
+  /** Balance reports: rows are not windowed; the report computes everything as of `to` (and the comparison's `to`). */
+  asOf?: boolean;
   /** Whitelisted date fields: the request can only pick one of these. */
   dateFields: { value: string; label: string }[];
   dimensions: { key: keyof Row & string; label: string }[];

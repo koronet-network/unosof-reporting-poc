@@ -23,15 +23,15 @@ export async function runReport(def: AnyReport, req: Request) {
   const matches = (r: Record<string, unknown>, skip?: string) => dims.every(([k, v]) => k === skip || !v.length || eq(r, k, v));
   const within = (r: Record<string, unknown>, a: string, b: string) => { const d = def.dateOf(r, p.field); return d >= a && d <= b; };
   const filtered = rows.filter((r) => matches(r));
-  const cur = filtered.filter((r) => within(r, p.from, p.to));
-  const prev = cmp ? filtered.filter((r) => within(r, cmp.from, cmp.to)) : null;
-  const history = filtered.filter((r) => within(r, historyFrom, p.to));
+  const cur = def.asOf ? filtered : filtered.filter((r) => within(r, p.from, p.to));
+  const prev = cmp ? (def.asOf ? filtered : filtered.filter((r) => within(r, cmp.from, cmp.to))) : null;
+  const history = def.asOf ? filtered : filtered.filter((r) => within(r, historyFrom, p.to));
 
   const options = () => {
     const out: Record<string, { value: string; weight: number }[]> = {};
     for (const d of def.dimensions) {
       const m = new Map<string, number>();
-      for (const r of rows) if (within(r, p.from, p.to) && matches(r, d.key)) {
+      for (const r of rows) if ((def.asOf || within(r, p.from, p.to)) && matches(r, d.key)) {
         const raw = String(r[d.key] ?? "");
         if (!raw) continue;
         for (const k of raw.split("|")) m.set(k, (m.get(k) ?? 0) + def.weight(r)); // multi-valued cells (e.g. box species)

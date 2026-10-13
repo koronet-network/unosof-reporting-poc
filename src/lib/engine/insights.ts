@@ -131,10 +131,12 @@ export function concentration(values: number[], n = 10, pct = 0.8) {
 export const pctText = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(0)}%`;
 
 /** Keeps the most useful findings: one per subject, highest severity first, capped. */
-export function rankInsights<T extends { id: string; severity: "high" | "medium" | "low"; subject?: string }>(list: T[], max = 10): T[] {
+export function rankInsights<T extends { id: string; severity: "high" | "medium" | "low"; kind: string; subject?: string }>(list: T[], max = 10, perKind = 4): T[] {
   const order = { high: 0, medium: 1, low: 2 };
-  const seen = new Set<string>();
+  const seen = new Set<string>(), kinds = new Map<string, number>();
   return [...list].sort((a, b) => order[a.severity] - order[b.severity]).filter((i) => {
-    const k = i.subject ?? i.id; if (seen.has(k)) return false; seen.add(k); return true;
+    const k = i.subject ?? i.id; if (seen.has(k)) return false;
+    const n = kinds.get(i.kind) ?? 0; if (n >= perKind) return false; // keep variety: no single rule fills the panel
+    seen.add(k); kinds.set(i.kind, n + 1); return true;
   }).slice(0, max);
 }

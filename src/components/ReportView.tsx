@@ -9,7 +9,8 @@ import ChartBlock from "./Charts";
 import MultiSelect from "./MultiSelect";
 import DetailGrid from "./DetailGrid";
 import { fmt } from "@/lib/format";
-import { DEFAULT_RANGE, presets } from "@/lib/dataWindow";
+import { DEFAULT_RANGE, asOfPresets, presets } from "@/lib/dataWindow";
+import { addDays } from "@/lib/dates";
 
 /** One page for every report: filters, cards, findings, charts, rows. All state lives in the URL. */
 export default function ReportView({ slug }: { slug: string }) {
@@ -44,8 +45,9 @@ export default function ReportView({ slug }: { slug: string }) {
   const compare = sp.get("compare") ?? p?.compare ?? "prev";
   const list = (k: string) => (sp.get(k) ? sp.get(k)!.split("|").filter(Boolean) : []);
   const dims = data?.report.dimensions ?? [];
+  const asOf = data?.report.asOf ?? false;
   const active = dims.filter((d) => list(d.key).length);
-  const compareLabel = compare === "none" ? null : compare === "yoy" ? "same period last year" : "previous period";
+  const compareLabel = compare === "none" ? null : asOf ? "28 days earlier" : compare === "yoy" ? "same period last year" : "previous period";
   const openInsight = (i: Insight) => {
     const patch: Record<string, string | string[] | null> = {};
     for (const d of dims) patch[d.key] = i.filter?.[d.key] ?? null;
@@ -70,25 +72,34 @@ export default function ReportView({ slug }: { slug: string }) {
       </header>
 
       <section aria-label="Filters" className="sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-line bg-bg/95 px-4 py-2.5 backdrop-blur">
-        <label className="text-xs text-ink2" htmlFor="from">From</label>
-        <input id="from" type="date" className="field" value={from} onChange={(e) => e.target.value && set({ from: e.target.value })} />
-        <label className="text-xs text-ink2" htmlFor="to">to</label>
-        <input id="to" type="date" className="field" value={to} onChange={(e) => e.target.value && set({ to: e.target.value })} />
+        {asOf ? (
+          <>
+            <label className="text-xs text-ink2" htmlFor="to">As of</label>
+            <input id="to" type="date" className="field" value={to} onChange={(e) => e.target.value && set({ to: e.target.value, from: addDays(e.target.value, -27) })} />
+          </>
+        ) : (
+          <>
+            <label className="text-xs text-ink2" htmlFor="from">From</label>
+            <input id="from" type="date" className="field" value={from} onChange={(e) => e.target.value && set({ from: e.target.value })} />
+            <label className="text-xs text-ink2" htmlFor="to">to</label>
+            <input id="to" type="date" className="field" value={to} onChange={(e) => e.target.value && set({ to: e.target.value })} />
+          </>
+        )}
         {data && data.report.dateFields.length > 1 && (
           <select id="field" className="field" value={sp.get("field") ?? p?.field} onChange={(e) => set({ field: e.target.value })} aria-label="Date used">
             {data.report.dateFields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
         )}
         <select id="compare" className="field" value={compare} onChange={(e) => set({ compare: e.target.value })} aria-label="Compare with">
-          <option value="prev">vs previous period</option>
-          <option value="yoy">vs same period last year</option>
+          <option value="prev">{asOf ? "vs 28 days earlier" : "vs previous period"}</option>
+          {!asOf && <option value="yoy">vs same period last year</option>}
           <option value="none">no comparison</option>
         </select>
         <span className="mx-1 h-5 w-px bg-line" aria-hidden />
         {dims.map((d) => <MultiSelect key={d.key} id={`f-${d.key}`} label={d.label} options={data?.options[d.key] ?? []} value={list(d.key)} onChange={(v) => set({ [d.key]: v })} />)}
         {active.length > 0 && <button className="btn" onClick={() => set(Object.fromEntries(dims.map((d) => [d.key, null])))}>Clear filters</button>}
         <div className="ml-auto flex flex-wrap gap-1">
-          {presets().map((pr) => <button key={pr.label} className={`btn ${from === pr.from && to === pr.to ? "border-accent bg-bg3" : ""}`} onClick={() => set({ from: pr.from, to: pr.to })}>{pr.label}</button>)}
+          {(asOf ? asOfPresets() : presets()).map((pr) => <button key={pr.label} className={`btn ${from === pr.from && to === pr.to ? "border-accent bg-bg3" : ""}`} onClick={() => set({ from: pr.from, to: pr.to })}>{pr.label}</button>)}
         </div>
       </section>
 
