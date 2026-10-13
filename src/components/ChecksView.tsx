@@ -39,8 +39,8 @@ export default function ChecksView({ reports }: { reports: { slug: string; title
                       <thead><tr className="text-left text-[11px] uppercase tracking-wide text-ink2"><th className="py-1">Measure</th><th className="py-1 text-right">Legacy</th><th className="py-1 text-right">POC</th><th className="py-1 text-right">Diff</th><th className="py-1 pl-3">Status</th></tr></thead>
                       <tbody>
                         {res.rows.map((x) => {
-                          const diff = x.poc - x.legacy, rel = x.legacy ? Math.abs(diff / x.legacy) : Math.abs(diff);
-                          const ok = rel < 0.0005;
+                          const diff = x.poc - x.legacy;
+                          const ok = Math.abs(diff) < 0.011; // exact for counts, to the cent for money
                           return (
                             <tr key={x.measure} className="border-t border-line2">
                               <td className="py-1">{x.measure}</td>
