@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { resolveTenant } from "./tenant";
 import { parseParams, compareRange, HISTORY_DAYS, type Params } from "./params";
 import { addDays, minDate } from "./dates";
-import type { AnyReport } from "@/reports/types";
+import type { AnyReport, Column } from "@/reports/types";
 
 /** Shared entry for every report route: tenant from host, validated params, cached rows, sliced windows. */
 export async function runReport(def: AnyReport, req: Request) {
@@ -43,15 +43,17 @@ export async function runReport(def: AnyReport, req: Request) {
   const ctx = { p, cur, prev, history, compare: cmp };
   /** Grid rows: the report's own rows (e.g. per day) or the raw rows of the window. */
   const grid = () => (def.gridRows ? def.gridRows(ctx) : cur);
-  return { tenant, p, cmp, rows, cur, prev, history, cached, ms, options, sp, ctx, grid };
+  /** Grid columns: fixed, or built from the window (pivot reports). */
+  const columns = () => (def.gridColumns ? def.gridColumns(ctx) : def.columns);
+  return { tenant, p, cmp, rows, cur, prev, history, cached, ms, options, sp, ctx, grid, columns };
 }
 
 /** Search and sort for the detail grid and exports; the sort column is whitelisted by the report's columns. */
-export function sortAndSearch(def: AnyReport, rows: Record<string, unknown>[], sp: URLSearchParams) {
+export function sortAndSearch(def: AnyReport, rows: Record<string, unknown>[], sp: URLSearchParams, columns: Column<any>[] = def.columns) { // eslint-disable-line @typescript-eslint/no-explicit-any
   const q = (sp.get("q") ?? "").trim().toLowerCase();
-  const keys = new Set(def.columns.map((c) => c.key));
-  const want = sp.get("sort") ?? def.defaultSort?.key ?? def.columns[0].key;
-  const key = keys.has(want) ? want : def.columns[0].key;
+  const keys = new Set(columns.map((c) => c.key));
+  const want = sp.get("sort") ?? def.defaultSort?.key ?? columns[0].key;
+  const key = keys.has(want) ? want : columns[0].key;
   const dirParam = sp.get("dir") ?? def.defaultSort?.dir ?? "desc";
   const dir = dirParam === "asc" ? 1 : -1;
   const searched = q && def.search ? rows.filter((r) => def.search!(r).toLowerCase().includes(q)) : rows;

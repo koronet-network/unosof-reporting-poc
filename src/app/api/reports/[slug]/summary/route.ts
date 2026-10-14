@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       tenant: run.tenant.key,
       report: {
         slug: def.slug, title: def.title, area: def.area, description: def.description, legacy: def.legacy,
-        dateFields: def.dateFields, dimensions: def.dimensions, columns: def.columns, defaultSort: def.defaultSort ?? null,
+        dateFields: def.dateFields, dimensions: def.dimensions, columns: run.columns(), defaultSort: def.defaultSort ?? null,
         hasParity: Boolean(def.parity), asOf: Boolean(def.asOf),
       },
       params: run.p,

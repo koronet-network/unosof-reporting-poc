@@ -74,6 +74,8 @@ export interface ReportDef<Row> extends ReportMeta {
   summarize: (ctx: Context<Row>) => Summary;
   /** Grid columns. They describe `gridRows` when the report supplies it, otherwise the raw rows. */
   columns: Column<any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  /** Columns that depend on the window, e.g. one column per week in a pivot. Overrides `columns` for the grid and exports. */
+  gridColumns?: (ctx: Context<Row>) => Column<any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   /** Rows for the grid and exports, e.g. one row per day. Defaults to the current window's raw rows. */
   gridRows?: (ctx: Context<Row>) => Record<string, unknown>[];
   /** Custom filter matching, e.g. a box that contains several species. Defaults to equality. */

@@ -22,7 +22,7 @@ async function queryClassifier(db: string, from: string, to: string): Promise<Cl
   const [packed, defects] = await Promise.all([
     pool.request().input("dtStart", sql.Date, D(from)).input("dtEnd", sql.Date, D(to))
       .input("boPurchased", sql.SmallInt, 0).input("boDeleted", sql.SmallInt, 0)
-      .input("exitExclusion", sql.VarChar(sql.MAX), exit).input("warehouseCol", sql.VarChar(4), "proc")
+      .input("exitExclusion", sql.VarChar(sql.MAX), exit).input("warehouseCol", sql.VarChar(4), "proc").input("allClassifiers", sql.Bit, 0)
       .query(sqlFile("classifier-stems.sql")),
     pool.request().input("dtStart", sql.Date, D(from)).input("dtEnd", sql.Date, D(to))
       .input("idLanguage", sql.VarChar(2), "en").input("idDomain", sql.Int, idDomain())
@@ -41,6 +41,49 @@ async function queryClassifier(db: string, from: string, to: string): Promise<Cl
 }
 export const loadClassifier = (db: string, _field: string, from: string, to: string) =>
   cachedRange(`${db}|classifier`, from, to, (f, t) => queryClassifier(db, f, t));
+
+const exitExclusion = async (pool: Awaited<ReturnType<typeof getPool>>) =>
+  str((await pool.request().query("select top 1 gu_exit_exclusion from z_taxes")).recordset[0]?.gu_exit_exclusion);
+
+// ---------- Rendemiento Bunchador: bunches and stems per bunching station and day ----------
+/** Groups whose bunchador report counts by table instead of classifier (dsp_..._ClassifierB.cfm:36). */
+export const TABLE_GROUPS = ["AGN", "FLV", "MCH", "PRI"];
+export const stationMode = (): "table" | "classifier" => (TABLE_GROUPS.includes((process.env.GROUP_NAME ?? "LRS").toUpperCase()) ? "table" : "classifier");
+export type BunchRow = {
+  day: string; station: string; classifier: string; table: string; warehouse: string; variety: string; species: string; length: number; stems: number; bunches: number;
+};
+async function queryBunchador(db: string, from: string, to: string): Promise<BunchRow[]> {
+  const pool = await getPool(db);
+  const res = await pool.request().input("dtStart", sql.Date, D(from)).input("dtEnd", sql.Date, D(to))
+    .input("boPurchased", sql.SmallInt, 0).input("boDeleted", sql.SmallInt, 0)
+    .input("exitExclusion", sql.VarChar(sql.MAX), await exitExclusion(pool)).input("warehouseCol", sql.VarChar(4), "proc").input("allClassifiers", sql.Bit, 1)
+    .query(sqlFile("classifier-stems.sql"));
+  const mode = stationMode();
+  return (res.recordset as Record<string, unknown>[]).map((r) => {
+    const classifier = String(num(r.id_classifier)).padStart(3, "0"), table = str(r.tx_table) || "(none)";
+    return { day: iso(r.dt_day), station: mode === "table" ? table : classifier, classifier, table, warehouse: str(r.nm_warehouse),
+      variety: str(r.nm_variety), species: str(r.nm_species), length: num(r.nu_length), stems: num(r.nu_stems), bunches: num(r.nu_bunches_attr) };
+  });
+}
+export const loadBunchador = (db: string, _field: string, from: string, to: string) =>
+  cachedRange(`${db}|bunchador`, from, to, (f, t) => queryBunchador(db, f, t));
+
+// ---------- processed stems by variety (week) ----------
+export type VarRow = { day: string; variety: string; species: string; warehouse: string; length: number; stems: number; bunches: number };
+export const VARIETY_DATE_FIELDS = { inventory: "ip.dt_inventory", creation: "ip.dt_creation" } as const;
+async function queryVarietyWeek(db: string, field: string, from: string, to: string): Promise<VarRow[]> {
+  const col = VARIETY_DATE_FIELDS[field as keyof typeof VARIETY_DATE_FIELDS] ?? VARIETY_DATE_FIELDS.inventory; // whitelisted identifier
+  const pool = await getPool(db);
+  const res = await pool.request().input("dtStart", sql.Date, D(from)).input("dtEnd", sql.Date, D(to))
+    .input("boPurchased", sql.SmallInt, 0).input("boDeleted", sql.SmallInt, 0).input("exitExclusion", sql.VarChar(sql.MAX), await exitExclusion(pool))
+    .query(sqlFile("variety-week.sql").replaceAll("{{DATE_COL}}", col));
+  return (res.recordset as Record<string, unknown>[]).map((r) => ({
+    day: iso(r.dt_day), variety: str(r.nm_variety), species: str(r.nm_species), warehouse: str(r.nm_warehouse), length: num(r.nu_length),
+    stems: num(r.nu_stems), bunches: num(r.nu_bunches_attr),
+  }));
+}
+export const loadVarietyWeek = (db: string, field: string, from: string, to: string) =>
+  cachedRange(`${db}|varietyweek|${field}`, from, to, (f, t) => queryVarietyWeek(db, field, f, t));
 
 // ---------- standing orders: one row per expected order (day x standing order) ----------
 export type SoRow = {

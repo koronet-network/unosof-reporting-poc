@@ -7,6 +7,7 @@
 --   @boDeleted smallint = 0               -1 = all, else bunch status (legacy default 0 = active)
 --   @exitExclusion varchar(max)           comma list of exit-reason GUIDs; legacy default = z_taxes.gu_exit_exclusion; '' = none
 --   @warehouseCol varchar(4) = 'proc'     'proc' -> ip.gu_warehouse (legacy default), 'orig' -> ip.gu_warehouse_orig
+--   @allClassifiers bit = 0               0 = classifier report (drops classifier 0 / NULL); 1 = Rendemiento Bunchador (keeps them)
 -- Warehouse / classifier / variety / species / table / length filters are applied in the app over the cached rows.
 -- nu_bunches_attr: each bunch counted once, on its first variety line (additive at any grain).
 -- nu_bunches_legacy at day x classifier = COUNT(DISTINCT gu_inventory) and must be recomputed with the companion query below.
@@ -27,7 +28,7 @@ with pk as (
   inner join z_products p             on pc.gu_product = p.gu_product and p.bo_produced = 1
   where ip.dt_creation >= @dtStart
     and ip.dt_creation <  dateadd(day, 1, @dtEnd)
-    and ip.id_classifier <> 0                      -- legacy "id_classifier <> ''" (int vs '' = 0); also drops NULL
+    and (@allClassifiers = 1 or ip.id_classifier <> 0) -- legacy "id_classifier <> ''" (int vs '' = 0); also drops NULL
     and (@boDeleted   = -1 or ip.bo_deleted   = @boDeleted)
     and (@boPurchased = -1 or ip.bo_purchased = @boPurchased)
     and not exists (select 1 from z_inventory_packaging_exits ex
