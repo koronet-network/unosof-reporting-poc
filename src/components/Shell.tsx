@@ -7,17 +7,26 @@ import type { ReportMeta } from "@/reports/types";
 
 type Entry = ReportMeta & { status: "ready" | "planned" };
 const AREAS: ReportMeta["area"][] = ["Sales", "Receivables", "Operations", "Production"];
+const COLLAPSED_KEY = "poc.sidebar.collapsed";
 
-/** App frame: report menu on the left, theme switch on top. */
+/** App frame: report menu on the left (collapsible on wide screens), theme switch on top. */
 export default function Shell({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<Entry[]>([]);
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const path = usePathname();
   useEffect(() => { fetch("/api/catalog").then((r) => r.json()).then(setItems).catch(() => undefined); }, []);
   useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1"); } catch { /* storage unavailable */ }
+  }, []);
+  const toggleCollapsed = () => setCollapsed((c) => {
+    try { localStorage.setItem(COLLAPSED_KEY, c ? "0" : "1"); } catch { /* storage unavailable */ }
+    return !c;
+  });
   return (
     <div className="flex min-h-screen">
-      <aside className={`${open ? "block" : "hidden"} fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-line bg-bg px-3 py-4 lg:sticky lg:top-0 lg:block lg:h-screen`}>
+      <aside id="report-menu" className={`${open ? "block" : "hidden"} fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-line bg-bg px-3 py-4 lg:sticky lg:top-0 lg:h-screen ${collapsed ? "lg:hidden" : "lg:block"}`}>
         <Link href="/" className="block px-2 pb-3">
           <span className="block text-[10px] font-semibold uppercase tracking-widest text-ink3">UNOSOF</span>
           <span className="text-base font-bold">Reporting POC</span>
@@ -53,7 +62,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">
           <button className="btn lg:hidden" onClick={() => setOpen(true)} aria-label="Open report menu">☰ Reports</button>
-          <span className="hidden text-[11px] text-ink2 lg:block">Local proof of concept · read-only · La Rosaleda copy</span>
+          <div className="hidden items-center gap-3 lg:flex">
+            <button className="btn" onClick={toggleCollapsed} aria-controls="report-menu" aria-expanded={!collapsed} title={collapsed ? "Show the report menu" : "Hide the report menu"}>
+              {collapsed ? "☰ Reports" : "« Hide menu"}
+            </button>
+            <span className="text-[11px] text-ink2">Local proof of concept · read-only · La Rosaleda copy</span>
+          </div>
           <ThemeToggle />
         </div>
         {children}
