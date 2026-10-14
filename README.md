@@ -1,6 +1,6 @@
 # UNOSOF reporting POC
 
-A local proof of concept that rebuilds twelve of UNOSOF's most used reports outside UNOSOF, on open-source tools, against a real tenant database. Every report opens with **summary cards**, flags **what is unusual with a recommendation**, shows its trend and breakdowns, and keeps the **rows and a real Excel export** underneath. Every filter lives in the URL, so any view is a link. A Light / Dark / System switch sits at the top.
+A local proof of concept that rebuilds thirteen of UNOSOF's most used reports and screens outside UNOSOF, on open-source tools, against a real tenant database. Every report opens with **summary cards**, flags **what is unusual with a recommendation**, shows its trend and breakdowns, and keeps the **rows and a real Excel export** underneath. Every filter lives in the URL, so any view is a link. A Light / Dark / System switch sits at the top.
 
 Each report's numbers are checked against a replica of the UNOSOF query it replaces, on the same database (see **Old vs new numbers** in the app).
 
@@ -18,6 +18,7 @@ Each report's numbers are checked against a replica of the UNOSOF query it repla
 | Operations | Processed Stems by Classifier | `Inventory.Report.getTotalProcessedStemsClassifier` |
 | Operations | Rendemiento Bunchador | `Inventory.Report.getTotalProcessedStemsClassifierB` |
 | Operations | Processed Stems by Variety (Week) | `Inventory.Report.getTotalProcessedStemsVarietyW` |
+| Operations | Dispo (Cached) | `InventoryPre.ListLiveDaily_OMSO_NC` |
 | Operations | Verify Standing Orders | `PurchaseOrders.ListResultVerifySO` |
 | Operations | AWB Detail | `Fues.Reports.AwbDetail` |
 | Production | Bruto Production by Variety (+ Total) | `Production.Report.ProductionByVariety(Total)` |
@@ -25,6 +26,8 @@ Each report's numbers are checked against a replica of the UNOSOF query it repla
 Processed Stems by Classifier stands in for Rendemiento Clasificador (PF): that report reads prefrio exits, and the local copy has none in its data window.
 
 Rendemiento Bunchador counts by table for AGN, FLV, MCH and PRI and by classifier for every other group, as UNOSOF does. On La Rosaleda it therefore gives the same totals as Processed Stems by Classifier; its page is about output per station rather than defects.
+
+Dispo (Cached) is a snapshot, not a period: it reads the availability table UNOSOF's inventory generator rewrites every 2–5 minutes, flags oversold and ageing stock, and says how old the snapshot is. The local copy holds a single test row in that table, so it shows the layout, not real stock.
 
 Processed Stems by Variety (Week) is a pivot: one column per ISO week of the chosen period, in the grid and in the Excel export.
 
@@ -43,6 +46,7 @@ The `/checks` page runs each report's legacy replica (`sql/legacy/`) next to the
 | Processed Stems by Classifier | cells, days, classifiers, stems, bunches | exact |
 | Rendemiento Bunchador | cells, days, bunchadores, stems, bunches | exact |
 | Processed Stems by Variety (Week) | week columns, varieties, variety × week cells, stems | exact |
+| Dispo (Cached) | products, warehouses, inventory, dispo, aging (current snapshot) | exact |
 | Verify Standing Orders | expected, exact, shifted, missing, duplicates (legacy mode) | exact |
 | AWB Detail | POs, AWBs, pieces, full boxes, stems, flor, FOB, SRI | exact |
 | Bruto Production | rows, bruto, S1, flor nacional, exportable | exact |

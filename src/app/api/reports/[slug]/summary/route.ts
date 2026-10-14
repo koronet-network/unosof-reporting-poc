@@ -16,7 +16,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       report: {
         slug: def.slug, title: def.title, area: def.area, description: def.description, legacy: def.legacy,
         dateFields: def.dateFields, dimensions: def.dimensions, columns: run.columns(), defaultSort: def.defaultSort ?? null,
-        hasParity: Boolean(def.parity), asOf: Boolean(def.asOf),
+        hasParity: Boolean(def.parity), asOf: Boolean(def.asOf), snapshot: Boolean(def.snapshot),
       },
       params: run.p,
       compare: run.cmp,

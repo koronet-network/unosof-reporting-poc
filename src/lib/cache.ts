@@ -9,9 +9,9 @@ const store = new Map<string, Entry<unknown>[]>();
 const inflight = new Map<string, Promise<Entry<unknown>>>();
 const ttl = () => Number(process.env.FACT_CACHE_TTL ?? 900) * 1000;
 
-export async function cachedRange<T>(key: string, from: string, to: string, loader: (from: string, to: string) => Promise<T[]>) {
+export async function cachedRange<T>(key: string, from: string, to: string, loader: (from: string, to: string) => Promise<T[]>, ttlMs = ttl()) {
   const now = Date.now();
-  const list = (store.get(key) ?? []).filter((e) => now - e.at < ttl());
+  const list = (store.get(key) ?? []).filter((e) => now - e.at < ttlMs);
   store.set(key, list);
   const hit = list.find((e) => e.from <= from && e.to >= to);
   if (hit) return { rows: hit.rows as T[], cached: true, ms: hit.ms };

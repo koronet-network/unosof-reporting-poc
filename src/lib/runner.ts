@@ -14,7 +14,7 @@ export async function runReport(def: AnyReport, req: Request) {
     dimensions: def.dimensions.map((d) => d.key),
     defaults: def.defaults,
   });
-  const cmp = compareRange(p);
+  const cmp = def.snapshot ? null : compareRange(p);
   const historyFrom = addDays(p.from, -HISTORY_DAYS);
   const loadFrom = minDate(cmp?.from ?? p.from, historyFrom);
   const { rows, cached, ms } = await def.load(tenant.database, p.field, loadFrom, p.to);
@@ -23,15 +23,16 @@ export async function runReport(def: AnyReport, req: Request) {
   const matches = (r: Record<string, unknown>, skip?: string) => dims.every(([k, v]) => k === skip || !v.length || eq(r, k, v));
   const within = (r: Record<string, unknown>, a: string, b: string) => { const d = def.dateOf(r, p.field); return d >= a && d <= b; };
   const filtered = rows.filter((r) => matches(r));
-  const cur = def.asOf ? filtered : filtered.filter((r) => within(r, p.from, p.to));
-  const prev = cmp ? (def.asOf ? filtered : filtered.filter((r) => within(r, cmp.from, cmp.to))) : null;
-  const history = def.asOf ? filtered : filtered.filter((r) => within(r, historyFrom, p.to));
+  const whole = def.asOf || def.snapshot; // balance and snapshot reports are not windowed
+  const cur = whole ? filtered : filtered.filter((r) => within(r, p.from, p.to));
+  const prev = cmp ? (whole ? filtered : filtered.filter((r) => within(r, cmp.from, cmp.to))) : null;
+  const history = whole ? filtered : filtered.filter((r) => within(r, historyFrom, p.to));
 
   const options = () => {
     const out: Record<string, { value: string; weight: number }[]> = {};
     for (const d of def.dimensions) {
       const m = new Map<string, number>();
-      for (const r of rows) if ((def.asOf || within(r, p.from, p.to)) && matches(r, d.key)) {
+      for (const r of rows) if ((whole || within(r, p.from, p.to)) && matches(r, d.key)) {
         const raw = String(r[d.key] ?? "");
         if (!raw) continue;
         for (const k of raw.split("|")) m.set(k, (m.get(k) ?? 0) + def.weight(r)); // multi-valued cells (e.g. box species)

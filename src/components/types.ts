@@ -11,6 +11,7 @@ export type ReportSummary = {
     defaultSort: { key: string; dir: "asc" | "desc" } | null;
     hasParity: boolean;
     asOf: boolean;
+    snapshot?: boolean;
   };
   params: Params;
   compare: { from: string; to: string; shift: number } | null;

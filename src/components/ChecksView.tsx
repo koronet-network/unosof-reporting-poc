@@ -7,11 +7,13 @@ type Result = { slug: string; title?: string; range?: { from: string; to: string
 const fmt = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-US") : v.toLocaleString("en-US", { maximumFractionDigits: 3 }));
 
 /** Runs every report's legacy query next to the POC's numbers for the same window. */
-export default function ChecksView({ reports }: { reports: { slug: string; title: string; legacy: string }[] }) {
-  const windows = presets().filter((p) => p.label === "Jan–Mar 2022" || p.label === "Q4 2021");
+export default function ChecksView({ reports }: { reports: { slug: string; title: string; legacy: string; snapshot?: boolean }[] }) {
+  const periods = presets().filter((p) => p.label === "Jan–Mar 2022" || p.label === "Q4 2021");
+  // A snapshot report has no period: it is checked once, on the stock as it is now.
+  const windowsOf = (r: { snapshot?: boolean }) => (r.snapshot ? [{ label: "Current snapshot", from: periods[0].from, to: periods[0].to }] : periods);
   const [results, setResults] = useState<Record<string, Result>>({});
   useEffect(() => {
-    for (const r of reports) for (const w of windows) {
+    for (const r of reports) for (const w of windowsOf(r)) {
       const key = `${r.slug}|${w.label}`;
       fetch(`/api/reports/${r.slug}/parity?from=${w.from}&to=${w.to}&compare=none`).then((x) => x.json())
         .then((j) => setResults((s) => ({ ...s, [key]: j.error ? { slug: r.slug, rows: [], error: [j.error, ...(j.details ?? [])].join(" ") } : j })))
@@ -26,11 +28,11 @@ export default function ChecksView({ reports }: { reports: { slug: string; title
       {reports.map((r) => (
         <section key={r.slug} className="card mt-5">
           <div className="card-h"><h2>{r.title}</h2><p className="font-mono">{r.legacy}</p></div>
-          {windows.map((w) => {
+          {windowsOf(r).map((w) => {
             const res = results[`${r.slug}|${w.label}`];
             return (
               <div key={w.label} className="px-4 py-3">
-                <div className="mb-1 text-xs font-semibold">{w.label} <span className="font-normal text-ink2">({w.from} – {w.to}){res?.ms != null ? ` · legacy query ${fmt(res.ms)} ms` : ""}</span></div>
+                <div className="mb-1 text-xs font-semibold">{w.label} <span className="font-normal text-ink2">{r.snapshot ? "" : `(${w.from} – ${w.to})`}{res?.ms != null ? ` · legacy query ${fmt(res.ms)} ms` : ""}</span></div>
                 {!res && <div className="text-xs text-ink2">Running…</div>}
                 {res?.error && <div className="text-xs text-bad">{res.error}</div>}
                 {res && !res.error && (
